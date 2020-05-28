@@ -10,9 +10,9 @@ namespace GameServer
     {
         idle,
         running,
-        somthing,
+        crouch,
         falling,
-        swingSword
+        sliding
     }
 
     public enum CombatAnimations
@@ -46,6 +46,10 @@ namespace GameServer
         [SerializeField] private float baseMoveSpeed = 5f;
 
         [SerializeField] private float Damage = 10f;
+
+        [SerializeField] private float baseMu = .5f;
+
+        [SerializeField] private float crouchMu = .1f;
 
         private float runModifer = 2;
 
@@ -118,7 +122,7 @@ namespace GameServer
             id = _id;
             username = _username;
             transform.position = SpawnPoints.GetSpawnPoint(teamdex).position;
-            inputs = new bool[8];
+            inputs = new bool[9];
             LeftClickCooldown = new TimedCallback(EnableLeftMouseClick, 100f,LeftMouseDown);
             RightClickCooldown = new TimedCallback(EnableRightMouseClick, 100f,RightMouseDown);
             name = "Player: " + id;
@@ -132,6 +136,7 @@ namespace GameServer
             health = maxHealth;
             score = 0;
             deaths = 0;
+            baseMu = mu;
 
             tag = "Player";
         }
@@ -183,6 +188,8 @@ namespace GameServer
             _inputDir.x += (inputs[2] ? 1 : 0) - (inputs[3] ? 1 : 0);
             _inputDir.z += (inputs[4]? 1 : 0);
 
+            Sliding = inputs[8];
+
             if (inputs[5])
             {
                 moveSpeed = baseMoveSpeed * runModifer;
@@ -197,6 +204,16 @@ namespace GameServer
 
             MouseClick(inputs[6], LeftClickCooldown, ref LeftClickExit);
             MouseClick(inputs[7], RightClickCooldown, ref RightClickExit);
+
+            Vector3 tempScale = transform.localScale;
+            if (Sliding)
+            {
+                tempScale.y = .5f;
+            } else
+            {
+                tempScale.y = 1f;
+            }
+            transform.localScale = tempScale;
         }
 
         private void MouseClick(bool clickState, TimedCallback projectileTimer, ref bool clickExit)
@@ -220,21 +237,12 @@ namespace GameServer
 
         private void Animation(Vector3 _inputDir) 
         {
-            if (!isGrounded)
-            {
-                animationState = (int)AnimationStates.falling;
-            } else
-            {
-                animationState = (int)AnimationStates.idle;
-                if (inputs[5])
-                {
-                    animationState = (int)AnimationStates.running;
-                }
-            }
-            if (Attacking)
-            {
-                animationState = (int)AnimationStates.swingSword;
-            }
+            animationState = 
+                !isGrounded ? (int)AnimationStates.falling :
+                Sliding ? (int)AnimationStates.sliding :
+                inputs[5] ? (int)AnimationStates.running :
+                (int)AnimationStates.idle;
+
             ServerSend.playerAnimation(this, _inputDir.x, _inputDir.y);
             return;
 
@@ -251,7 +259,8 @@ namespace GameServer
 
             moveVector = _moveDir * moveSpeed * UnityEngine.Time.deltaTime;
 
-            cc.Move(moveVector);
+            if (isGrounded && !Sliding)
+                cc.Move(moveVector);
 
             JumpVal = _inputDir.z;
 
@@ -300,6 +309,17 @@ namespace GameServer
 
         private void FixedUpdate()
         {
+            if (Sliding && mu == baseMu)
+            {
+                mu = crouchMu;
+            } else if (Sliding&&isGrounded)
+            {
+                mu = Mathf.Lerp(mu, baseMu - .01f, .005f);
+            } else if (isGrounded)
+            {
+                mu = baseMu;
+            }
+
             PhyisicsUpdate(JumpVal);
             Phyisics();
             ServerSend.PlayerPosition(this);
@@ -307,11 +327,12 @@ namespace GameServer
 
         public void PhyisicsUpdate(float jump)
         {
-            if (isGrounded)
+            if (isGrounded) //Jump Math
             {
+                veclocity.y = 0;
                 if (canJump)
                 {
-                    veclocity.y = 0;
+                    veclocity += moveVector * jump * moveSpeed;
                     veclocity.y += jump * jumpHeight;
                     isGrounded = false;
                 }
@@ -425,21 +446,48 @@ namespace GameServer
             }*/
         }
 
-        private void CreateRayProjectile(int upid) //PROJECTILE INDEX 0
+        private void CreateRayProjectile(int upid)
         {
             Vector3 hitpoint = ShootLocation.position + Head.forward * 30f;
             RaycastHit hit;
             // Does the ray intersect any objects excluding the player layer
             if (Physics.Raycast(ShootLocation.position, Head.forward, out hit, Mathf.Infinity))
             {
-                hitpoint = hit.point;
-                Damageable isDamageable = hit.collider.GetComponent<Damageable>();
-                if (isDamageable != null)
-                {
-                    isDamageable.TakeDamage(Damage,id);
-                }
+                DecideEffect(hit, upid, out hitpoint);
             }
             ServerSend.ProjectileHit(HandLocation.position, hitpoint, upid);
+        }
+
+        private void DecideEffect(RaycastHit hit, int upid, out Vector3 hitpoint)
+        {
+            hitpoint = hit.point;
+            
+            switch (upid)
+            {
+                case 0:  //PROJECTILE INDEX 0
+
+                    Damageable isDamageable = hit.collider.GetComponent<Damageable>();
+                    if (isDamageable != null)
+                    {
+                        isDamageable.TakeDamage(Damage, id);
+                    }
+
+                    break; //PROJECTILE INDEX 0 END
+
+
+                case 1:  //PROJECTILE INDEX 1
+
+                    RaycastHit hitTemp;
+                    Vector3 secondaryPoint = hitpoint + Vector3.up * 100f;
+                    // Does the ray intersect any objects excluding the player layer
+                    if (Physics.Raycast(hit.point, Vector3.up, out hitTemp, Mathf.Infinity))
+                    {
+                        secondaryPoint = hitTemp.point;
+                    }
+                    Instantiate(Prefabs.instance.Effects[upid], hitpoint, Quaternion.identity);
+                    break; //PROJECTILE INDEX 1 END
+
+            } //Switch end
         }
         #endregion
     }

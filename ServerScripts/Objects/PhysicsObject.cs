@@ -19,6 +19,10 @@ namespace GameServer
 
         private float mass = 1 / Constants.MASS_MODIFIER;
 
+        public float mu = 1;
+
+        public bool Sliding = false;
+
         [HideInInspector] public Vector3 veclocity = Vector3.zero;
 
         private float thickness = 0.2f; //Old Plane Colision
@@ -46,39 +50,6 @@ namespace GameServer
             }
 
             cc.Move(veclocity);
-        }
-
-        private void CheckPlaneColision() {
-            foreach (Plane plane in GameLogic.Planes.Values)
-            {
-                if (plane.OnPlane(transform.position + veclocity, thickness) && plane.tag != "")
-                {
-                    if (plane.HitPlane(transform.position.y, veclocity.y))
-                    {
-                        if (plane.tag == "Ground")
-                        {
-                            transform.position = new Vector3(transform.position.x,plane.position.y,transform.position.z);
-                            veclocity = new Vector3(veclocity.x, 0, veclocity.z);
-                            //isGrounded = true;
-                        }
-                        if (plane.tag == "Death")
-                        {
-                            ResetObject();
-                        }
-                    }
-                }
-            }
-        }
-
-        private void CheckStillOnPlane()
-        {
-            foreach (Plane plane in GameLogic.Planes.Values)
-            {
-                if (transform.position.y == plane.position.y)
-                {
-                    //isGrounded = plane.OnPlane(transform.position + veclocity, thickness);
-                }
-            }
         }
 
         public void ApplyGravity(float modifier)
