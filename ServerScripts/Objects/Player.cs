@@ -111,6 +111,7 @@ namespace GameServer
             health = maxHealth;
             score = 0;
             deaths = 0;
+            baseMu = mu;
 
             tag = "Player";
         }
@@ -160,13 +161,23 @@ namespace GameServer
             playerMovement.CalculateValues(inputs, out _inputDir);
 
             playerMovement.Move(_inputDir);
-
+            
             ServerSend.PlayerRotation(this);
 
             Animation(_inputDir);
 
             MouseClick(inputs[6], LeftClickCooldown, ref LeftClickExit);
             MouseClick(inputs[7], RightClickCooldown, ref RightClickExit);
+
+            Vector3 tempScale = transform.localScale;
+            if (Sliding)
+            {
+                tempScale.y = .5f;
+            } else
+            {
+                tempScale.y = 1f;
+            }
+            transform.localScale = tempScale;
         }
 
         private void MouseClick(bool clickState, TimedCallback projectileTimer, ref bool clickExit)

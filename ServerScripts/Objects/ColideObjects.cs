@@ -34,7 +34,31 @@ public class ColideObjects : MonoBehaviour
         slopeLimit = Mathf.Sin((90-characterController.slopeLimit)*Mathf.PI/180);
     }
 
-    void OnControllerColliderHit(ControllerColliderHit hit)
+    private void FixedUpdate()
+    {
+        if (physicsObject.isGrounded)
+        {
+            if (!Physics.Raycast(transform.position, Vector3.down, .1f))
+            {
+                //Debug.Log("No Ground");
+                physicsObject.veclocity += physicsObject.moveVector* physicsObject.moveSpeed;
+                physicsObject.isGrounded = false;
+            }
+        }
+
+        if ((!physicsObject.isGrounded || physicsObject.Sliding) && physicsObject.moveVector != Vector3.zero)
+        {
+            //if (physicsObject.Sliding&&physicsObject.isGrounded) physicsObject.veclocity.y = 0;
+
+            float tempY = physicsObject.veclocity.y;
+            physicsObject.veclocity.y = 0;
+            float mag = physicsObject.veclocity.magnitude;
+            physicsObject.veclocity = ((physicsObject.veclocity*2) + physicsObject.moveVector).normalized * mag;
+            physicsObject.veclocity.y = tempY;
+        }
+    }
+
+        void OnControllerColliderHit(ControllerColliderHit hit)
     {
         //Debug.Log("COLIDE");
         if (hit.normal.y > slopeLimit)
@@ -44,7 +68,7 @@ public class ColideObjects : MonoBehaviour
             physicsObject.veclocity += new Vector3(hit.normal.x,0, hit.normal.z) * hit.normal.y * UnityEngine.Time.deltaTime;
         }
 
-        physicsObject.veclocity -= (physicsObject.veclocity/10f) * hit.normal.y;
+        physicsObject.veclocity -= (physicsObject.veclocity/2f) * hit.normal.y * physicsObject.mu;
 
         if (hit.gameObject.tag == "Death")
         {

@@ -44,7 +44,6 @@ namespace GameServer
             {
                 ApplyGravity(1);
             }
-
             playerMovement.MoveDirect(veclocity);
         }
 
