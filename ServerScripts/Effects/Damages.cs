@@ -6,7 +6,6 @@ namespace GameServer
 {
     class Damages : MonoBehaviour
     {
-
         float damage = 50;
 
         List<Damageable> alreadyDamaged = new List<Damageable>();

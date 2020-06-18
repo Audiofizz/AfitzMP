@@ -14,7 +14,7 @@ namespace GameServer
 
         public static void PreformLoadQueue(int toClient)
         {
-            queueToLoad(toClient);
+            queueToLoad?.Invoke(toClient);
         }
 
         public static void AddLoadToQueue(loadQueue action)

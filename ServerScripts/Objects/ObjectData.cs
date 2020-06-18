@@ -15,10 +15,5 @@ namespace GameServer
         [HideInInspector] public int owner = -1;
 
         [HideInInspector] public int createdTick = 1;
-
-        [HideInInspector] public Vector3 moveVector = Vector3.zero;
-
-        [HideInInspector] public float moveSpeed;
-
     } //End class
 }

@@ -11,13 +11,13 @@ namespace GameServer
 
         [Header("Components")]
 
-        public CharacterController cc;
-
-        [HideInInspector] public bool isGrounded = false;
+        public PlayerMovement playerMovement;
 
         private float gravity = -2.5f / Constants.TICKS_PER_SEC;
 
         private float mass = 1 / Constants.MASS_MODIFIER;
+
+        [HideInInspector] public float mu = 1;
 
         [HideInInspector] public Vector3 veclocity = Vector3.zero;
 
@@ -40,45 +40,12 @@ namespace GameServer
 
         public void Phyisics()
         {
-            if (!isGrounded)
+            if (!playerMovement.isGrounded)
             {
                 ApplyGravity(1);
             }
 
-            cc.Move(veclocity);
-        }
-
-        private void CheckPlaneColision() {
-            foreach (Plane plane in GameLogic.Planes.Values)
-            {
-                if (plane.OnPlane(transform.position + veclocity, thickness) && plane.tag != "")
-                {
-                    if (plane.HitPlane(transform.position.y, veclocity.y))
-                    {
-                        if (plane.tag == "Ground")
-                        {
-                            transform.position = new Vector3(transform.position.x,plane.position.y,transform.position.z);
-                            veclocity = new Vector3(veclocity.x, 0, veclocity.z);
-                            //isGrounded = true;
-                        }
-                        if (plane.tag == "Death")
-                        {
-                            ResetObject();
-                        }
-                    }
-                }
-            }
-        }
-
-        private void CheckStillOnPlane()
-        {
-            foreach (Plane plane in GameLogic.Planes.Values)
-            {
-                if (transform.position.y == plane.position.y)
-                {
-                    //isGrounded = plane.OnPlane(transform.position + veclocity, thickness);
-                }
-            }
+            playerMovement.MoveDirect(veclocity);
         }
 
         public void ApplyGravity(float modifier)
@@ -109,7 +76,7 @@ namespace GameServer
             {
                 if (client.player != null)
                 {
-                    if (Vector3.Dot(client.player.forward, Vector3.Normalize(transform.position - client.player.transform.position)) > 0.525321989f)
+                    if (Vector3.Dot(client.player.playerMovement.GetForward(), Vector3.Normalize(transform.position - client.player.transform.position)) > 0.525321989f)
                         Callback(client.player.id);
                 }
             }
