@@ -6,7 +6,7 @@ using GameServer;
 public class Barrel : MonoBehaviour, Damageable, ExplodeOnDeath
 {
     private MeshRenderer meshRenderer;
-    private Collider collider;
+    private new Collider collider;
 
     [SerializeField] private float respawnTime = 5f;
 

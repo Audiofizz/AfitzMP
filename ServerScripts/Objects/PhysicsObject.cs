@@ -11,17 +11,13 @@ namespace GameServer
 
         [Header("Components")]
 
-        public CharacterController cc;
-
-        [HideInInspector] public bool isGrounded = false;
+        public PlayerMovement playerMovement;
 
         private float gravity = -2.5f / Constants.TICKS_PER_SEC;
 
         private float mass = 1 / Constants.MASS_MODIFIER;
 
-        public float mu = 1;
-
-        public bool Sliding = false;
+        [HideInInspector] public float mu = 1;
 
         [HideInInspector] public Vector3 veclocity = Vector3.zero;
 
@@ -44,12 +40,11 @@ namespace GameServer
 
         public void Phyisics()
         {
-            if (!isGrounded)
+            if (!playerMovement.isGrounded)
             {
                 ApplyGravity(1);
             }
-
-            cc.Move(veclocity);
+            playerMovement.MoveDirect(veclocity);
         }
 
         public void ApplyGravity(float modifier)
@@ -80,7 +75,7 @@ namespace GameServer
             {
                 if (client.player != null)
                 {
-                    if (Vector3.Dot(client.player.forward, Vector3.Normalize(transform.position - client.player.transform.position)) > 0.525321989f)
+                    if (Vector3.Dot(client.player.playerMovement.GetForward(), Vector3.Normalize(transform.position - client.player.transform.position)) > 0.525321989f)
                         Callback(client.player.id);
                 }
             }

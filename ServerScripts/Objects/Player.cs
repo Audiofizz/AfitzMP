@@ -23,6 +23,8 @@ namespace GameServer
     class Player : PhysicsObject, Damageable
     {
 
+        public PlayerData playerData;
+
         #region User Information
 
         [Header("User Information")]
@@ -39,24 +41,6 @@ namespace GameServer
 
         #endregion
 
-        #region Modifiers
-
-        [Header("Player Modifiers")]
-
-        [SerializeField] private float baseMoveSpeed = 5f;
-
-        [SerializeField] private float Damage = 10f;
-
-        [SerializeField] private float baseMu = .5f;
-
-        [SerializeField] private float crouchMu = .1f;
-
-        private float runModifer = 2;
-
-        private float jumpHeight = 20f / Constants.TICKS_PER_SEC;
-
-        #endregion
-
         #region Cooldowns
 
         private bool LeftClickExit = false;
@@ -70,8 +54,6 @@ namespace GameServer
         #endregion
 
         #region Inputs
-
-        private bool canJump = true;
 
         private bool canShoot = true;
 
@@ -109,8 +91,6 @@ namespace GameServer
 
         private int lastHitByPlayerID = -1;
 
-        private float JumpVal = 0;
-
         [Header("Animation Info")]
 
         public CombatAnimations LeftClickAnimation;
@@ -127,11 +107,6 @@ namespace GameServer
             RightClickCooldown = new TimedCallback(EnableRightMouseClick, 100f,RightMouseDown);
             name = "Player: " + id;
 
-            InitVar();
-        }
-
-        private void InitVar()
-        {
             SetMass(120);
             health = maxHealth;
             score = 0;
@@ -139,6 +114,11 @@ namespace GameServer
             baseMu = mu;
 
             tag = "Player";
+        }
+
+        private void Start()
+        {
+            
         }
 
         public override void OnReset()
@@ -151,7 +131,7 @@ namespace GameServer
             {
                 Debug.Log($"Cant Move {e}");
             }
-            
+
 
             health = maxHealth;
             deaths += 1;
@@ -168,39 +148,23 @@ namespace GameServer
         private void MoveToSpawn()
         {
             Vector3 temp = SpawnPoints.GetSpawnPoint(teamdex).position;
-            //Debug.Log($"Moving to {temp}");
-            cc.enabled = false;
-            transform.position = temp;
-            cc.enabled = true;
+
+            playerMovement.Teleport(temp);
         }
 
         #region Basic Functions
 
         private void Update()
         {
-            //Debug.Log($"Grounded state = {cc.isGrounded}");
+            Vector3 _inputDir;
 
-            if (inputs[4] != true && isGrounded)
-                canJump = true;
+            playerMovement.CalculateValues(inputs, out _inputDir);
 
-            Vector3 _inputDir = Vector3.zero;
-            _inputDir.y += (inputs[0]?1:0) - (inputs[1]?1:0);
-            _inputDir.x += (inputs[2] ? 1 : 0) - (inputs[3] ? 1 : 0);
-            _inputDir.z += (inputs[4]? 1 : 0);
-
-            Sliding = inputs[8];
-
-            if (inputs[5])
-            {
-                moveSpeed = baseMoveSpeed * runModifer;
-            } else
-            {
-                moveSpeed = baseMoveSpeed;
-            }
+            playerMovement.Move(_inputDir);
+            
+            ServerSend.PlayerRotation(this);
 
             Animation(_inputDir);
-
-            Move(_inputDir);
 
             MouseClick(inputs[6], LeftClickCooldown, ref LeftClickExit);
             MouseClick(inputs[7], RightClickCooldown, ref RightClickExit);
@@ -237,34 +201,14 @@ namespace GameServer
 
         private void Animation(Vector3 _inputDir) 
         {
-            animationState = 
-                !isGrounded ? (int)AnimationStates.falling :
-                Sliding ? (int)AnimationStates.sliding :
+            animationState =
+                !playerMovement.isGrounded ? (int)AnimationStates.falling :
+                playerMovement.IsSliding() ? (int)AnimationStates.sliding :
                 inputs[5] ? (int)AnimationStates.running :
                 (int)AnimationStates.idle;
 
             ServerSend.playerAnimation(this, _inputDir.x, _inputDir.y);
             return;
-
-        }
-
-        //MAIN
-        private void Move(Vector3 _inputDir)
-        {
-            forward = transform.forward;
-            Vector3 _right = Vector3.Normalize(Vector3.Cross(forward, new Vector3(0, 1, 0)));
-
-            Vector3 _moveDir = _right * _inputDir.x + forward * _inputDir.y;
-            if (_moveDir != Vector3.zero) _moveDir = Vector3.Normalize(_moveDir);
-
-            moveVector = _moveDir * moveSpeed * UnityEngine.Time.deltaTime;
-
-            if (isGrounded && !Sliding)
-                cc.Move(moveVector);
-
-            JumpVal = _inputDir.z;
-
-            ServerSend.PlayerRotation(this);
         }
 
         public void SetInput(bool[] _inputs)
@@ -309,41 +253,27 @@ namespace GameServer
 
         private void FixedUpdate()
         {
-            if (Sliding && mu == baseMu)
+            if (playerMovement.IsSliding() && mu == playerData.baseMu)
             {
-                mu = crouchMu;
-            } else if (Sliding&&isGrounded)
+                mu = playerData.crouchMu;
+            } else if (playerMovement.IsSliding() && playerMovement.isGrounded)
             {
-                mu = Mathf.Lerp(mu, baseMu - .01f, .005f);
-            } else if (isGrounded)
+                mu = Mathf.Lerp(mu, playerData.baseMu - .01f, .005f);
+            } else if (playerMovement.isGrounded)
             {
-                mu = baseMu;
+                mu = playerData.baseMu;
             }
 
-            PhyisicsUpdate(JumpVal);
+            PhyisicsUpdate();
             Phyisics();
             ServerSend.PlayerPosition(this);
         }
 
-        public void PhyisicsUpdate(float jump)
+        public void PhyisicsUpdate()
         {
-            if (isGrounded) //Jump Math
+            if (playerMovement.PreformJump(ref veclocity))
             {
-                veclocity.y = 0;
-                if (canJump)
-                {
-                    veclocity += moveVector * jump * moveSpeed;
-                    veclocity.y += jump * jumpHeight;
-                    isGrounded = false;
-                }
-            }
-            else
-            {
-                canJump = false;
-                if (jump == 1 && veclocity.y >= 0)
-                {
-                    ApplyGravity(-.5f);
-                }
+                ApplyGravity(-.5f);
             }
             //SavePosition();
         }
@@ -469,7 +399,15 @@ namespace GameServer
                     Damageable isDamageable = hit.collider.GetComponent<Damageable>();
                     if (isDamageable != null)
                     {
-                        isDamageable.TakeDamage(Damage, id);
+                        float mod = 1;
+                        if (hit.collider.tag == "Head")
+                        {
+                            mod = 2;
+                            Debug.Log("headshot");
+                        }
+                            
+
+                        isDamageable.TakeDamage(playerData.Damage * mod, id);
                     }
 
                     break; //PROJECTILE INDEX 0 END
