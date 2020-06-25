@@ -23,6 +23,7 @@ public class PlayerMovement : MonoBehaviour
 
     private bool canJump = false;
 
+    //Change this to wishDir
     private Vector3 moveVector;
 
     private float jumpHeight = 20f / Constants.TICKS_PER_SEC;
@@ -80,17 +81,17 @@ public class PlayerMovement : MonoBehaviour
         Vector3 _moveDir = _right * _inputDir.x + forward * _inputDir.y;
         if (_moveDir != Vector3.zero) _moveDir = Vector3.Normalize(_moveDir);
 
-        moveVector = _moveDir * moveSpeed * UnityEngine.Time.deltaTime;
+        moveVector = _moveDir; //Changed
 
         if (isGrounded && !Sliding)
-            cc.Move(moveVector);
+            cc.Move(moveVector * moveSpeed * UnityEngine.Time.deltaTime);//Changed
 
         JumpVal = _inputDir.z;
     }
 
     public void MoveDirect(Vector3 _moveVector)
     {
-        cc.Move(_moveVector);
+        cc.Move(_moveVector * moveSpeed * UnityEngine.Time.deltaTime); //Changed
     }
 
     public void Teleport(Vector3 _position)
@@ -110,7 +111,7 @@ public class PlayerMovement : MonoBehaviour
                 veclocity.y = -objectColider.SlopeNormal.y;
             if (canJump)
             {
-                veclocity += moveVector * JumpVal * moveSpeed;
+                //veclocity += moveVector * JumpVal * moveSpeed;
                 veclocity.y += JumpVal * jumpHeight;
                 isGrounded = false;
             }
