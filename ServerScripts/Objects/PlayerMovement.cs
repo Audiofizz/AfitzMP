@@ -82,16 +82,17 @@ public class PlayerMovement : MonoBehaviour
         if (_moveDir != Vector3.zero) _moveDir = Vector3.Normalize(_moveDir);
 
         moveVector = _moveDir; //Changed
-
-        if (isGrounded && !Sliding)
-            cc.Move(moveVector * moveSpeed * UnityEngine.Time.deltaTime);//Changed
+        
+        //Should now be moved by Velocity
+        /*if (isGrounded && !Sliding)
+            cc.Move(moveVector * moveSpeed * UnityEngine.Time.deltaTime);//Changed*/
 
         JumpVal = _inputDir.z;
     }
 
-    public void MoveDirect(Vector3 _moveVector)
+    public void MoveDirect(Vector3 _Vector)
     {
-        cc.Move(_moveVector * moveSpeed * UnityEngine.Time.deltaTime); //Changed
+        cc.Move(_Vector); //Changed
     }
 
     public void Teleport(Vector3 _position)
