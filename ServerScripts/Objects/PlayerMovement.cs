@@ -19,10 +19,13 @@ public class PlayerMovement : MonoBehaviour
 
     private bool Sliding = false;
 
-    private float JumpVal;
+    private float JumpVal = 0;
 
     private bool canJump = false;
+    
+    private bool holdJump = false;
 
+    //Change this to wishDir
     private Vector3 moveVector;
 
     private float jumpHeight = 20f / Constants.TICKS_PER_SEC;
@@ -80,17 +83,22 @@ public class PlayerMovement : MonoBehaviour
         Vector3 _moveDir = _right * _inputDir.x + forward * _inputDir.y;
         if (_moveDir != Vector3.zero) _moveDir = Vector3.Normalize(_moveDir);
 
-        moveVector = _moveDir * moveSpeed * UnityEngine.Time.deltaTime;
-
-        if (isGrounded && !Sliding)
-            cc.Move(moveVector);
-
+        moveVector = _moveDir; //Changed
+        
+        //Should now be moved by Velocity
+        /*if (isGrounded && !Sliding)
+            cc.Move(moveVector * moveSpeed * UnityEngine.Time.deltaTime);//Changed*/
+            
+        if (JumpVal != _inputDir.z) {
+            holdJump = !holdJump;
+        }
+        
         JumpVal = _inputDir.z;
     }
 
-    public void MoveDirect(Vector3 _moveVector)
+    public void MoveDirect(Vector3 _Vector)
     {
-        cc.Move(_moveVector);
+        cc.Move(_Vector); //Changed
     }
 
     public void Teleport(Vector3 _position)
@@ -104,13 +112,11 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isGrounded) //Jump Math
         {
-            if (!Sliding)
-                veclocity.y = 0;
-            else
-                veclocity.y = -objectColider.SlopeNormal.y;
+            veclocity.y = 0;
+            
             if (canJump)
             {
-                veclocity += moveVector * JumpVal * moveSpeed;
+                //veclocity += moveVector * JumpVal * moveSpeed;
                 veclocity.y += JumpVal * jumpHeight;
                 isGrounded = false;
             }
@@ -118,7 +124,7 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             canJump = false;
-            if (JumpVal == 1 && veclocity.y >= 0)
+            if (veclocity.y >= 0 && holdJump)
             {
                 return true;
             }
